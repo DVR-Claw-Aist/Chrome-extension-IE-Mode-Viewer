@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>IE Mode Viewer — Options</title>
+<style>
+body { font: 14px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:20px; max-width:640px; }
+h1 { font-size:20px; }
+.info { background:#e8f4fd; padding:10px; border-radius:4px; font-size:13px; margin:10px 0; }
+label { display:block; margin:12px 0 4px; font-weight:600; }
+textarea { width:100%; min-height:160px; font:12px Consolas,'Courier New',monospace; }
+.hint { font-size:12px; color:#666; margin:4px 0 12px; }
+.btn { padding:8px 20px; border:none; border-radius:4px; cursor:pointer; background:#0078d4; color:#fff; font-size:14px; }
+.btn:hover { background:#106ebe; }
+#saveStatus { margin-left:10px; font-size:13px; }
+</style></head>
+<body>
+<h1>IE Mode Viewer Settings</h1>
+<div class="info"><strong>Extension ID:</strong> <code id="extId"></code><br>
+Use this ID when running <code>install.ps1</code>.</div>
+
+<label for="whitelist">Auto-open URLs (one pattern per line)</label>
+<textarea id="whitelist" placeholder="*://*.legacysite.com/*&#10;*://192.168.*:*&#10;*://*.dvr-system.local/*"></textarea>
+<div class="hint">Wildcards: <code>*</code> matches anything. Examples: <code>*://*.example.com/*</code>, <code>*://10.0.*:*</code></div>
+
+<button id="saveBtn" class="btn">Save</button><span id="saveStatus"></span>
+<script src="options.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# .NET
+native/IEHost/bin/
+native/IEHost/obj/
+dotnet-sdk-*/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vs/
+*.sln.ide/
+.idea/
+
+# Secrets — NEVER commit the extension private key
+extension.pem
+
+# Build artifacts / leftovers
+*.zip
+img.png
+pict.png
