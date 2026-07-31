@@ -1,107 +1,122 @@
+<div align="center">
+
+[English](README.md) · [Русский](README_RU.md)
+
 # IE Mode Viewer
 
-Chrome/Edge extension that opens pages in Internet Explorer (Trident) engine via Native Messaging for ActiveX/DVR compatibility.
+**Open legacy pages in a real Internet Explorer (Trident) window right from Chrome/Edge — ActiveX, DVR and corporate controls just work.**
 
-## Why
+[Screenshots](#screenshots) · [Features](#features) · [Architecture](#architecture) · [Installation](#installation) · [Roadmap](#roadmap)
 
-Some legacy web apps (DVR systems, corporate tools) require ActiveX controls that only work in Internet Explorer. This extension lets you open such pages in a dedicated IE window from Chrome/Edge with a single click.
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![Chrome](https://img.shields.io/badge/Chrome-Extension%20MV3-4285F4.svg?logo=googlechrome&logoColor=white)]()
+[![Edge](https://img.shields.io/badge/Edge-Extension%20MV3-0078D7.svg?logo=microsoftedge&logoColor=white)]()
+[![.NET](https://img.shields.io/badge/.NET-11-512BD4.svg?logo=dotnet&logoColor=white)]()
 
-## How it works
+</div>
 
-Popup → Native Messaging → IEHost.exe → WinForms + WebBrowser (Trident)
+![IE Mode Viewer](Screenshots/1.png)
 
-The extension sends the page URL to a native host (`IEHost.exe`) which spawns a Windows Forms window with the IE WebBrowser control pre-configured for ActiveX support.
+## Why This Project?
 
-## Requirements
+> IE Mode no longer supports our environment, so I built my own replacement.
 
-- Windows 10 or 11
-- Chrome or Edge 88+
-- .NET 11 SDK (`dotnet` available in `PATH`) — for building the native host
-
-> The .NET SDK is **not bundled** in this repository. Install it from
-> [dotnet.microsoft.com](https://dotnet.microsoft.com/download) (or keep a local copy
-> and adjust the path in `install.ps1`).
-
-## Quick start
-
-1. **Publish native host**
-   ```
-   dotnet publish -c Release -r win-x86 --self-contained native\IEHost\IEHost.csproj
-   ```
-
-2. **Install**
-   ```
-   .\install.ps1 -ExtensionId <ID>
-   ```
-   (Extension ID is shown in the popup or at `chrome://extensions`)
-
-3. **Load extension**
-   - Go to `chrome://extensions`
-   - Enable **Developer mode**
-   - Drag `extension.crx` onto the page (recommended) or click **Load unpacked** → `extension/`
-
-4. **Use**
-   - Click the extension icon in the toolbar
-   - Click **Open in IE**
-
-> The extension ID is **dynamic** during development. Native messaging must be
-> re-registered whenever the ID changes: `.\install.ps1 -ExtensionId <ID>`.
-> To fix the ID permanently, pack the extension with a private key (see below).
-
-## Important: 32-bit only
-
-Must build as `win-x86`. Legacy DVR ActiveX controls are 32-bit COM components and won't load in a 64-bit process.
-
-## ActiveX features
-
-The viewer enables at startup (per-user, HKCU):
-- IE11 emulation (switchable IE7–IE11 via toolbar)
-- ActiveX installs allowed
-- ActiveX filtering disabled
-- Safe ActiveX scripting enabled
-- DEP disabled for ATL controls
-- SSL error pages bypassed
-- Domain added to Trusted Sites
-
-## Project structure
-
-```
-extension/           Chrome Extension (Manifest V3)
-  manifest.json
-  background.js      Native Messaging bridge
-  content_script.js  Whitelist auto-open
-  popup.html/js/css  Manual open + extension ID
-  options.html/js    Whitelist management
-native/
-  host_manifest.json Native Messaging host manifest template
-  IEHost/            .NET 11 WinForms app
-    Program.cs       Entry point + Native Messaging loop
-    ViewerForm.cs    IE WebBrowser control
-    NativeMessaging.cs   stdin/stdout JSON protocol
-install.ps1          Build + install script
-extension.crx        Pre-packed extension (fixed extension ID)
-Screenshots/         UI screenshots
-```
+Some legacy web apps — DVR systems, corporate portals, industrial software — still require ActiveX controls that only run in Internet Explorer. This extension opens such pages in a dedicated IE (Trident) window from Chrome/Edge with a single click.
 
 ## Screenshots
 
-See the `Screenshots/` folder in the repository root.
+| | |
+|---|---|
+| ![Extension popup](Screenshots/1.png) | ![Options — whitelist](Screenshots/2.png) |
+| ![IE viewer window](Screenshots/3.png) | ![IE viewer — rendered page](Screenshots/4.png) |
 
-## Dev workflow
+## Features
 
-- JS/CSS changes → reload at `chrome://extensions`
-- C# changes → `dotnet publish` + `install.ps1` + reload extension
-- To fix the extension ID (so native messaging survives reloads): pack via `chrome://extensions` → **Pack extension**, then drag the resulting `.crx` onto the page. Keep `extension.pem` **locally and private** — it is the key that fixes your extension ID. It is excluded from this repository (`.gitignore`).
+- **One-click open** — send the current tab to the IE viewer from the toolbar popup.
+- **Auto-open whitelist** — glob patterns in the options page; matching URLs open in IE automatically.
+- **Native Messaging** — Chrome talks to a .NET host over a JSON stdin/stdout protocol.
+- **IE7–IE11 emulation switch** — toolbar button cycles the document mode, no registry fiddling.
+- **ActiveX enabled** — installs allowed, filtering off, DEP workaround, safe scripting for controls.
+- **Trusted Sites auto-add** — the page's host lands in the IE Trusted Sites zone.
+- **SSL error pages bypassed** — legacy certificates no longer block the page.
+- **Per-user install** — HKCU registry only, no admin rights required, registered for Chrome and Edge.
 
-## Use Cases
+## Architecture
 
-- DVR systems
-- Corporate portals
-- ActiveX applications
-- Legacy ERP
-- Industrial software
+```
+┌──────────────┐   ┌─────────────────────┐   ┌────────────────────────────────────┐
+│  Popup /     │   │  Service worker     │   │  IEHost.exe  (.NET 11, win-x86)    │
+│  options /   │──▶│  background.js      │──▶│  NativeMessaging loop (stdio JSON) │
+│  content     │   │  sendNativeMessage  │   │    └─ spawn --viewer <url>         │
+│  script      │   └─────────────────────┘   │  ViewerForm (WinForms)             │
+└──────────────┘                              │    └─ WebBrowser (Trident)         │
+                                              │  HKCU reg tweaks (IE / ActiveX)    │
+                                              └────────────────────────────────────┘
+```
 
-## Motivation
+- Chrome ↔ host IPC uses the **Native Messaging** protocol: 4-byte little-endian length + UTF-8 JSON on stdin/stdout.
+- The viewer runs as a **separate 32-bit (`win-x86`) process** — legacy DVR ActiveX controls are 32-bit COM components and won't load in a 64-bit process.
+- IE and ActiveX settings are applied **per-user (HKCU)** at viewer startup — no admin rights needed.
+- The extension ID is **dynamic during development**; `install.ps1` rewrites the host manifest and registry keys every time it runs.
 
-IE Mode no longer supports our environment, so I built my own replacement.
+## Tech Stack
 
+| Layer | Technology |
+|---|---|
+| Extension | Chrome/Edge Manifest V3, vanilla JS (no build tooling) |
+| Native host | C# / .NET 11 (`net11.0-windows`) |
+| UI | Windows Forms + `WebBrowser` control (Trident engine) |
+| IPC | Native Messaging (JSON over stdio) |
+
+## How It Works
+
+1. Click the extension icon — the popup checks whether the native host is installed and enabled.
+2. Click **Open in IE** — the popup sends the active tab's URL to the service worker.
+3. `background.js` calls `chrome.runtime.sendNativeMessage` → `IEHost.exe`.
+4. `IEHost.exe` reads the JSON request, then spawns itself with `--viewer <url>`.
+5. The viewer process applies HKCU registry tweaks: IE11 emulation, ActiveX support, Trusted Sites, SSL bypass.
+6. A WinForms window opens with the `WebBrowser` (Trident) control and navigates to the URL.
+7. For whitelisted URLs the content script triggers the same flow automatically.
+
+## Installation
+
+Requires **Windows 10/11** and a **.NET 11 SDK** (see [prerequisites](#prerequisites)).
+
+```bash
+git clone https://github.com/DVR-Claw-Aist/Chrome-extension-IE-Mode-Viewer.git
+cd Chrome-extension-IE-Mode-Viewer
+dotnet publish -c Release -r win-x86 --self-contained native\IEHost\IEHost.csproj
+.\install.ps1 -ExtensionId <ID>
+```
+
+Load the extension at `chrome://extensions` → enable **Developer mode** → drag `extension.crx` onto the page, or click **Load unpacked** and pick `extension/`. The extension ID is shown in the popup or at `chrome://extensions`.
+
+> **The extension ID is dynamic during development.** Native messaging must be re-registered whenever it changes: `.\install.ps1 -ExtensionId <ID>`. To fix the ID permanently, pack the extension with a private key (Chrome → **Pack extension**) and keep `extension.pem` **local and private** — it is excluded from this repository.
+
+### Prerequisites
+
+- Windows 10 or 11
+- .NET 11 SDK — a system install in `PATH`, or pass `.\install.ps1 -DotNetPath <path\to\dotnet.exe>`
+- Chrome or Edge 88+
+
+The .NET SDK is **not bundled** in this repository. Install it from [dotnet.microsoft.com](https://dotnet.microsoft.com/download).
+
+### Commands
+
+| Command | Description |
+|---|---|
+| `dotnet publish -c Release -r win-x86 --self-contained native\IEHost\IEHost.csproj` | Build the self-contained 32-bit native host |
+| `.\install.ps1 -ExtensionId <ID>` | Install host + register for Chrome and Edge (HKCU, no admin) |
+| `.\install.ps1 -DotNetPath <path>` | Install with a specific .NET SDK path |
+
+## Roadmap
+
+- [ ] Automated tests (JS + native host)
+- [ ] Installer (MSI) with SDK path detection
+- [ ] Right-click context menu item "Open in IE"
+- [ ] Remember emulation mode per site
+- [ ] 64-bit host fallback for pages that don't need ActiveX
+
+## License
+
+Released under the [MIT](LICENSE) license.
