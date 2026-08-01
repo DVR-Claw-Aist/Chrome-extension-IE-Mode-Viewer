@@ -106,7 +106,7 @@ dotnet publish -c Release -r win-x86 --self-contained native\IEHost\IEHost.cspro
 ### Требования
 
 - Windows 10 или 11
-- .NET 11 SDK — локальная копия в `sdk\dotnet.exe` (gitignored), системная установка в `PATH` или `.\install.ps1 -DotNetPath <путь\к\dotnet.exe>`
+- .NET 11 SDK — только для сборки хоста: системная установка в `PATH` или `.\install.ps1 -DotNetPath <путь\к\dotnet.exe>`
 - Chrome или Edge 88+
 
 .NET SDK **не включён** в репозиторий и нужен только для сборки хоста (публикация self-contained — конечным пользователям .NET не требуется). Установите его со [страницы .NET 11.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).

@@ -106,7 +106,7 @@ Load the extension at `chrome://extensions` → enable **Developer mode** → dr
 ### Prerequisites
 
 - Windows 10 or 11
-- .NET 11 SDK — local copy at `sdk\dotnet.exe` (gitignored), a system install in `PATH`, or pass `.\install.ps1 -DotNetPath <path\to\dotnet.exe>`
+- .NET 11 SDK — only to build the host: a system install in `PATH`, or pass `.\install.ps1 -DotNetPath <path\to\dotnet.exe>`
 - Chrome or Edge 88+
 
 The .NET SDK is **not bundled** in this repository and is only needed to build the host (publish is self-contained, so end users don't need .NET). Install it from the [.NET 11.0 SDK page](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).
