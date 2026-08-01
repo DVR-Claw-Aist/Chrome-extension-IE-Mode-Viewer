@@ -1,6 +1,8 @@
 param(
     [string]$ExtensionId = "",
-    [string]$DotNetPath = ""
+    [string]$DotNetPath = "",
+    [switch]$Standalone,
+    [switch]$Autostart
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,12 +23,12 @@ $appDir   = Join-Path $env:LOCALAPPDATA "IEHost"
 
 # Find dotnet
 if ([string]::IsNullOrEmpty($DotNetPath)) {
-    $candidate = Join-Path $repoRoot "dotnet-sdk-11.0.1\dotnet.exe"
-    if (Test-Path $candidate) {
-        $DotNetPath = $candidate
-    } else {
-        $DotNetPath = "dotnet"
-    }
+    $candidates = @(
+        (Join-Path $repoRoot "sdk\dotnet.exe"),
+        (Join-Path $repoRoot "dotnet-sdk-11.0.1\dotnet.exe")
+    )
+    $found = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($found) { $DotNetPath = $found } else { $DotNetPath = "dotnet" }
 }
 
 # Publish self-contained if needed
@@ -69,4 +71,25 @@ Write-Host "`n[OK] Installed for Chrome and Edge" -ForegroundColor Green
 Write-Host "     Extension ID : $ExtensionId"
 Write-Host "     Host binary  : $(Join-Path $appDir 'IEHost.exe')"
 Write-Host "     Manifest     : $manifestPath"
+
+if ($Standalone) {
+    $lnkPath = Join-Path ([Environment]::GetFolderPath('Desktop')) "IE Mode Viewer.lnk"
+    $ws = New-Object -ComObject WScript.Shell
+    $sc = $ws.CreateShortcut($lnkPath)
+    $sc.TargetPath = Join-Path $appDir "IEHost.exe"
+    $sc.Arguments = "--standalone"
+    $sc.WorkingDirectory = $appDir
+    $sc.IconLocation = "$appDir\IEHost.exe,0"
+    $sc.Save()
+    Write-Host "     Shortcut      : $lnkPath"
+
+    if ($Autostart) {
+        $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+        New-Item -Path $runKey -Force | Out-Null
+        Set-ItemProperty -Path $runKey -Name "IEHost" -Value "`"$appDir\IEHost.exe`" --standalone"
+        Write-Host "     Autostart     : enabled (HKCU Run)"
+    }
+}
+
 Write-Host "`nNext step: reload the extension at chrome://extensions" -ForegroundColor Yellow
+Write-Host "         or run the standalone app:  $(Join-Path $appDir 'IEHost.exe') --standalone" -ForegroundColor Yellow

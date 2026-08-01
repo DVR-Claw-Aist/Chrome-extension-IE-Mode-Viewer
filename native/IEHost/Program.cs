@@ -17,16 +17,94 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
-        if (args.Length > 0 && args[0] == "--viewer")
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log("UnhandledException", e.ExceptionObject?.ToString());
+        Application.ThreadException += (_, e) => Log("ThreadException", e.Exception?.ToString());
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+
+        try
         {
-            string url = args.Length > 1 ? args[1] : "about:blank";
-            StartViewer(url);
+            if (args.Length > 0 && args[0] == "--viewer")
+            {
+                string url = args.Length > 1 ? NormalizeUrl(args[1]) : "about:blank";
+                StartViewer(url);
+            }
+            else if (args.Length > 0 && args[0] == "--standalone")
+            {
+                RunStandalone();
+            }
+            else if (Console.IsInputRedirected)
+            {
+                SetEmulation();
+                RunLoop();
+            }
+            else
+            {
+                RunStandalone();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            SetEmulation();
-            RunLoop();
+            Log("Main", ex.ToString());
+            throw;
         }
+    }
+
+    public static void Log(string where, string? text)
+    {
+        try
+        {
+            var path = Path.Combine(AppSettings.SettingsDir, "error.log");
+            Directory.CreateDirectory(AppSettings.SettingsDir);
+            File.AppendAllText(path, $"[{DateTime.Now:O}] {where}: {text}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
+    static void RunStandalone()
+    {
+        Application.SetHighDpiMode(HighDpiMode.SystemAware);
+        Application.EnableVisualStyles();
+        Application.SetCompatibleTextRenderingDefault(false);
+
+        var settings = AppSettings.Load();
+
+        if (settings.FirstRun)
+        {
+            using var prompt = new UrlPrompt(settings.DefaultUrl);
+            if (prompt.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(prompt.Url))
+            {
+                settings.DefaultUrl = prompt.Url;
+                settings.LastUrl = prompt.Url;
+            }
+            settings.FirstRun = false;
+            settings.Save();
+        }
+
+        string startUrl = string.IsNullOrWhiteSpace(settings.LastUrl) ? settings.DefaultUrl : settings.LastUrl;
+
+        var browser = ChromeManager.FindBrowser();
+        if (browser == null)
+        {
+            using var pick = new OpenFileDialog
+            {
+                Title = "Select Chrome or Edge",
+                Filter = "Browser|chrome.exe;msedge.exe",
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            };
+            if (pick.ShowDialog() == DialogResult.OK) browser = pick.FileName;
+        }
+
+        if (!string.IsNullOrEmpty(browser))
+        {
+            settings.ChromePath = browser;
+            settings.Save();
+            ChromeManager.LaunchBrowser(browser, settings.DebugPort, NormalizeUrl(startUrl));
+            _ = ChromeManager.WaitForCdpAsync(settings.DebugPort, 10000);
+        }
+
+        SpawnViewer(startUrl);
+        using var tray = new TrayApp(settings);
+        Application.Run(tray);
     }
 
     static void StartViewer(string url)
@@ -38,6 +116,28 @@ class Program
         SetActiveXSupport();
         AddToTrustedSites(url);
         Application.Run(new ViewerForm(url));
+    }
+
+    static string NormalizeUrl(string url)
+    {
+        url = url.Trim();
+        if (!url.Contains("://") && !url.StartsWith("about:")) return "http://" + url;
+        return url;
+    }
+
+    public static void SpawnViewer(string url)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = Environment.ProcessPath!,
+                UseShellExecute = true,
+            };
+            psi.Arguments = $"--viewer \"{url.Replace("\"", "")}\"";
+            Process.Start(psi);
+        }
+        catch { }
     }
 
     static void RunLoop()

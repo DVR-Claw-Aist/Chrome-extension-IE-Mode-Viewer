@@ -2,6 +2,7 @@
 native/IEHost/bin/
 native/IEHost/obj/
 dotnet-sdk-*/
+sdk/
 
 # OS
 Thumbs.db

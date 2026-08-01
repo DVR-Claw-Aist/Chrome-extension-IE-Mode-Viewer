@@ -20,6 +20,18 @@ public partial class ViewerForm : Form
         _browser.Navigate(url);
     }
 
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        var current = _browser.Url?.ToString() ?? _initialUrl;
+        if (!string.IsNullOrWhiteSpace(current))
+        {
+            var s = AppSettings.Load();
+            s.LastUrl = current;
+            s.Save();
+        }
+        base.OnFormClosing(e);
+    }
+
     void InitializeComponent()
     {
         Text = "IE Mode Viewer";

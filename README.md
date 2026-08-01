@@ -4,7 +4,7 @@
 
 # IE Mode Viewer
 
-**Open legacy pages in a real Internet Explorer (Trident) window right from Chrome/Edge — ActiveX, DVR and corporate controls just work.**
+**Open legacy pages in a real Internet Explorer (Trident) window right from Chrome/Edge — ActiveX, DVR and corporate controls just work.** Works with or without the extension (standalone tray mode).
 
 [Screenshots](#screenshots) · [Features](#features) · [Architecture](#architecture) · [Installation](#installation) · [Roadmap](#roadmap)
 
@@ -40,6 +40,7 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 - **Trusted Sites auto-add** — the page's host lands in the IE Trusted Sites zone.
 - **SSL error pages bypassed** — legacy certificates no longer block the page.
 - **Per-user install** — HKCU registry only, no admin rights required, registered for Chrome and Edge.
+- **Standalone mode** — run `IEHost.exe` without the extension: tray icon + global hotkey (`Ctrl+Alt+E`) opens the active Chrome tab in the IE viewer.
 
 ## Architecture
 
@@ -55,6 +56,7 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 ```
 
 - Chrome ↔ host IPC uses the **Native Messaging** protocol: 4-byte little-endian length + UTF-8 JSON on stdin/stdout.
+- **Standalone mode**: `IEHost.exe` runs a tray app with a global hotkey. It finds Chrome via the registry (App Paths, falls back to Edge), launches a managed Chrome with `--remote-debugging-port` and a dedicated profile (`%LOCALAPPDATA%\IEHost\ChromeProfile`), then reads the active tab over the Chrome DevTools Protocol. First run asks for a default URL; the viewer always opens the last visited URL (`lastUrl`).
 - The viewer runs as a **separate 32-bit (`win-x86`) process** — legacy DVR ActiveX controls are 32-bit COM components and won't load in a 64-bit process.
 - IE and ActiveX settings are applied **per-user (HKCU)** at viewer startup — no admin rights needed.
 - The extension ID is **dynamic during development**; `install.ps1` rewrites the host manifest and registry keys every time it runs.
@@ -78,6 +80,14 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 6. A WinForms window opens with the `WebBrowser` (Trident) control and navigates to the URL.
 7. For whitelisted URLs the content script triggers the same flow automatically.
 
+### Standalone mode (no extension)
+
+1. Run `IEHost.exe --standalone` (or the desktop shortcut created by `install.ps1 -Standalone`).
+2. On first run, a dialog asks for the default URL; the tray icon and the global hotkey `Ctrl+Alt+E` become active.
+3. With Chrome open, press the hotkey — the active tab's URL is read via CDP and opened in the IE viewer.
+4. The viewer always reopens the last visited URL (`lastUrl`) — right-click the tray icon to change the hotkey or exit.
+5. Use `install.ps1 -Standalone -Autostart` to add the tray app to Windows startup (HKCU Run).
+
 ## Installation
 
 Requires **Windows 10/11** and a **.NET 11 SDK** (see [prerequisites](#prerequisites)).
@@ -96,7 +106,7 @@ Load the extension at `chrome://extensions` → enable **Developer mode** → dr
 ### Prerequisites
 
 - Windows 10 or 11
-- .NET 11 SDK — a system install in `PATH`, or pass `.\install.ps1 -DotNetPath <path\to\dotnet.exe>`
+- .NET 11 SDK — local copy at `sdk\dotnet.exe` (gitignored), a system install in `PATH`, or pass `.\install.ps1 -DotNetPath <path\to\dotnet.exe>`
 - Chrome or Edge 88+
 
 The .NET SDK is **not bundled** in this repository and is only needed to build the host (publish is self-contained, so end users don't need .NET). Install it from the [.NET 11.0 SDK page](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).
@@ -107,6 +117,8 @@ The .NET SDK is **not bundled** in this repository and is only needed to build t
 |---|---|
 | `dotnet publish -c Release -r win-x86 --self-contained native\IEHost\IEHost.csproj` | Build the self-contained 32-bit native host |
 | `.\install.ps1 -ExtensionId <ID>` | Install host + register for Chrome and Edge (HKCU, no admin) |
+| `.\install.ps1 -Standalone` | Create a desktop shortcut for the standalone tray app |
+| `.\install.ps1 -Standalone -Autostart` | Also add the tray app to Windows startup (HKCU Run) |
 | `.\install.ps1 -DotNetPath <path>` | Install with a specific .NET SDK path |
 
 ## Roadmap
