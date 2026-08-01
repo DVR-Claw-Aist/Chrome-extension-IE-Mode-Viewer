@@ -11,8 +11,12 @@ $rid = "win-x86"
 $tfm = "net11.0-windows"
 
 if ([string]::IsNullOrEmpty($ExtensionId)) {
-    $ExtensionId = Read-Host "Enter extension ID (copy from popup or chrome://extensions)"
-    if ([string]::IsNullOrEmpty($ExtensionId)) { Write-Error "Extension ID required"; exit 1 }
+    if ($Standalone) {
+        $ExtensionId = "standalone"
+    } else {
+        $ExtensionId = Read-Host "Enter extension ID (copy from popup or chrome://extensions)"
+        if ([string]::IsNullOrEmpty($ExtensionId)) { Write-Error "Extension ID required"; exit 1 }
+    }
 }
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -54,7 +58,8 @@ $manifest = @{
     allowed_origins = @("chrome-extension://$ExtensionId/")
 }
 $manifestPath = Join-Path $appDir "com.chrom_ext.ie_host.json"
-$manifest | ConvertTo-Json | Set-Content $manifestPath -Encoding UTF8
+$content = $manifest | ConvertTo-Json
+[System.IO.File]::WriteAllText($manifestPath, $content, (New-Object System.Text.UTF8Encoding($false)))
 
 # Registry keys (HKCU = no admin)
 $targets = @(

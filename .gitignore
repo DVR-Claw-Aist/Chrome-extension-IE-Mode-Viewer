@@ -16,6 +16,9 @@ Thumbs.db
 # Secrets — NEVER commit the extension private key
 extension.pem
 
+# Local agent/dev notes — never on Git
+AGENTS.md
+
 # Build artifacts / leftovers
 *.zip
 img.png

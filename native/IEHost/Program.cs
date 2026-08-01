@@ -208,7 +208,7 @@ class Program
         var psi = new ProcessStartInfo
         {
             FileName = Environment.ProcessPath!,
-            Arguments = $"--viewer \"{url}\"",
+            Arguments = $"--viewer \"{url.Replace("\"", "")}\"",
             UseShellExecute = true
         };
         Process.Start(psi);
