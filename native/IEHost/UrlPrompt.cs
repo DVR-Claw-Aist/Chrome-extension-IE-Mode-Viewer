@@ -9,7 +9,7 @@ public class UrlPrompt : Form
     public UrlPrompt(string defaultUrl)
     {
         Text = "IE Mode Viewer — First run";
-        Size = new(480, 160);
+        Size = new(480, 200);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -35,12 +35,21 @@ public class UrlPrompt : Form
             if (e.KeyChar == (char)Keys.Enter) { e.Handled = true; DialogResult = DialogResult.OK; }
         };
 
-        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new(288, 88), Size = new(80, 30) };
-        var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new(376, 88), Size = new(80, 30) };
+        var warn = new Label
+        {
+            Text = "The viewer enables ActiveX and adds this site to the IE Trusted Sites zone.\nUse it only for trusted legacy pages (DVR, intranet) — not for random web sites.",
+            Location = new(16, 84),
+            Size = new(440, 38),
+            Font = new("Segoe UI", 9),
+            ForeColor = Color.FromArgb(176, 80, 0),
+        };
+
+        var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new(288, 132), Size = new(80, 30) };
+        var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new(376, 132), Size = new(80, 30) };
 
         AcceptButton = ok;
         CancelButton = cancel;
 
-        Controls.AddRange([label, _input, ok, cancel]);
+        Controls.AddRange([label, _input, warn, ok, cancel]);
     }
 }

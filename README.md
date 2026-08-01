@@ -23,12 +23,14 @@
 
 Some legacy web apps — DVR systems, corporate portals, industrial software — still require ActiveX controls that only run in Internet Explorer. This extension opens such pages in a dedicated IE (Trident) window from Chrome/Edge with a single click.
 
+> **Security warning.** The viewer enables ActiveX and adds every host it opens to the IE Trusted Sites zone (per-user, HKCU). It also relaxes SSL, DEP and file-download checks for the viewer process. Use it **only for trusted legacy pages** — DVR systems, corporate portals, intranet — and **never** browse unknown public websites in it. Legacy pages can run arbitrary ActiveX/scripting with reduced protection.
+
 ## Screenshots
 
 | | |
 |---|---|
-| ![Extension popup](Screenshots/1.png) | ![Options — whitelist](Screenshots/2.png) |
-| ![IE viewer window](Screenshots/3.png) | ![IE viewer — rendered page](Screenshots/4.png) |
+| ![IE viewer window](Screenshots/1.png) | ![IE viewer — rendered page](Screenshots/2.png) |
+| ![IE viewer — ActiveX/DVR page](Screenshots/3.png) | ![Extension popup](Screenshots/4.png) |
 
 ## Features
 
