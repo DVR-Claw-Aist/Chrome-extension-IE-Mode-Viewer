@@ -8,6 +8,7 @@ public class TrayApp : ApplicationContext
     readonly NotifyIcon _icon;
     readonly HotkeyWindow _hotkeyWindow = new();
     const int HOTKEY_ID = 1;
+    bool _busy;
 
     public TrayApp(AppSettings settings)
     {
@@ -49,14 +50,42 @@ public class TrayApp : ApplicationContext
 
     async Task OpenActiveTabAsync()
     {
-        var url = await ChromeManager.GetActiveTabUrl(_settings.DebugPort);
-        if (string.IsNullOrEmpty(url))
+        if (_busy) return;
+        _busy = true;
+        try
         {
-            _icon.ShowBalloonTip(3000, "IE Mode Viewer",
-                "No page found in managed Chrome. Open a page there first.", ToolTipIcon.Warning);
-            return;
+            if (string.IsNullOrEmpty(_settings.ChromePath))
+            {
+                _icon.ShowBalloonTip(3000, "IE Mode Viewer",
+                    "No browser configured. Open viewer once to detect Chrome.", ToolTipIcon.Warning);
+                return;
+            }
+
+            Process? launched = null;
+            if (!ChromeManager.IsBrowserRunning(_settings.DebugPort))
+            {
+                launched = ChromeManager.LaunchBrowser(_settings.ChromePath, _settings.DebugPort);
+                if (launched != null)
+                    await ChromeManager.WaitForCdpAsync(_settings.DebugPort, 8000);
+            }
+
+            var url = await ChromeManager.GetActiveTabUrl(_settings.DebugPort);
+            if (string.IsNullOrEmpty(url))
+            {
+                _icon.ShowBalloonTip(3000, "IE Mode Viewer",
+                    launched != null
+                        ? "Managed Chrome was started. Open a page there, then press the hotkey again."
+                        : "No page found in managed Chrome. Open a page there first.", ToolTipIcon.Warning);
+                return;
+            }
+
+            Program.SpawnViewer(url);
+            await ChromeManager.CloseBrowserAsync(_settings.DebugPort, launched);
         }
-        Program.SpawnViewer(url);
+        finally
+        {
+            _busy = false;
+        }
     }
 
     void OpenViewerAtLast()

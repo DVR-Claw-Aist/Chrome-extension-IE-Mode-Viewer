@@ -1,7 +1,10 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.WebSockets;
+using System.Text;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Win32;
 
 namespace IEHost;
@@ -77,6 +80,47 @@ public static class ChromeManager
             catch { }
             await Task.Delay(300);
         }
+    }
+
+    public static bool IsBrowserRunning(int port)
+    {
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) };
+        try
+        {
+            using var r = client.GetAsync($"http://127.0.0.1:{port}/json/version").GetAwaiter().GetResult();
+            return r.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
+    public static async Task CloseBrowserAsync(int port, Process? fallback = null)
+    {
+        try
+        {
+            string? wsUrl = null;
+            using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(1) })
+            {
+                var json = await client.GetStringAsync($"http://127.0.0.1:{port}/json/version");
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("webSocketDebuggerUrl", out var w))
+                    wsUrl = w.GetString();
+            }
+
+            if (!string.IsNullOrEmpty(wsUrl))
+            {
+                using var ws = new ClientWebSocket();
+                await ws.ConnectAsync(new Uri(wsUrl), CancellationToken.None);
+                var msg = Encoding.UTF8.GetBytes("{\"id\":1,\"method\":\"Browser.close\"}");
+                await ws.SendAsync(msg, WebSocketMessageType.Text, true, CancellationToken.None);
+                await Task.Delay(300);
+                if (ws.State == WebSocketState.Open)
+                    await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "bye", CancellationToken.None);
+                return;
+            }
+        }
+        catch { }
+
+        try { if (fallback != null && !fallback.HasExited) fallback.Kill(); } catch { }
     }
 
     public static async Task<string?> GetActiveTabUrl(int port)

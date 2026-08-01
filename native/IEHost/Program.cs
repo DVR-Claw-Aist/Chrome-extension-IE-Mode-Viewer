@@ -94,15 +94,22 @@ class Program
             if (pick.ShowDialog() == DialogResult.OK) browser = pick.FileName;
         }
 
+        Process? managed = null;
         if (!string.IsNullOrEmpty(browser))
         {
             settings.ChromePath = browser;
             settings.Save();
-            ChromeManager.LaunchBrowser(browser, settings.DebugPort, NormalizeUrl(startUrl));
-            _ = ChromeManager.WaitForCdpAsync(settings.DebugPort, 10000);
+            managed = ChromeManager.LaunchBrowser(browser, settings.DebugPort, NormalizeUrl(startUrl));
         }
 
         SpawnViewer(startUrl);
+
+        if (managed != null)
+        {
+            ChromeManager.WaitForCdpAsync(settings.DebugPort, 8000).GetAwaiter().GetResult();
+            ChromeManager.CloseBrowserAsync(settings.DebugPort, managed).GetAwaiter().GetResult();
+        }
+
         using var tray = new TrayApp(settings);
         Application.Run(tray);
     }
