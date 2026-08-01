@@ -90,7 +90,7 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 
 ## Installation
 
-Requires **Windows 10/11** and a **.NET 11 SDK** (see [prerequisites](#prerequisites)).
+Requires **Windows 10/11**. The **.NET 11 SDK** is only needed if you build the host from source — end users just run the pre-built `IEHost.exe` (see [prerequisites](#prerequisites)).
 
 ```bash
 git clone https://github.com/DVR-Claw-Aist/Chrome-extension-IE-Mode-Viewer.git
