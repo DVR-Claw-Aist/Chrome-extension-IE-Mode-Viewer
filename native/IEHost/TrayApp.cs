@@ -26,6 +26,7 @@ public class TrayApp : ApplicationContext
         menu.Items.Add("Open viewer...", null, (_, _) => OpenViewerAtLast());
         menu.Items.Add("Settings", null, (_, _) => ShowSettings());
         menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Uninstall", null, (_, _) => Program.RunUninstall());
         menu.Items.Add("Exit", null, (_, _) => Exit());
         _icon.ContextMenuStrip = menu;
         _icon.DoubleClick += async (_, _) => await OpenActiveTabAsync();

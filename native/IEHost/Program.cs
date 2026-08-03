@@ -36,6 +36,10 @@ class Program
             {
                 RunInstall();
             }
+            else if (args.Length > 0 && args[0] == "--uninstall")
+            {
+                RunUninstall();
+            }
             else if (Console.IsInputRedirected)
             {
                 SetEmulation();
@@ -170,6 +174,21 @@ class Program
 
         try
         {
+            using var un = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall\IEHost");
+            un.SetValue("DisplayName", "IE Mode Viewer");
+            un.SetValue("DisplayVersion", "1.0");
+            un.SetValue("DisplayIcon", target);
+            un.SetValue("InstallLocation", appDir);
+            un.SetValue("Publisher", "DVR-Claw-Aist");
+            un.SetValue("UninstallString", $"\"{target}\" --uninstall");
+            un.SetValue("NoModify", 1, Microsoft.Win32.RegistryValueKind.DWord);
+            un.SetValue("NoRepair", 1, Microsoft.Win32.RegistryValueKind.DWord);
+        }
+        catch { }
+
+        try
+        {
             var link = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "IE Mode Viewer.lnk");
             dynamic ws = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
             dynamic sc = ws.CreateShortcut(link);
@@ -186,6 +205,51 @@ class Program
             Process.Start(new ProcessStartInfo { FileName = target, Arguments = "--standalone", UseShellExecute = true });
         }
         catch { }
+    }
+
+    public static void RunUninstall()
+    {
+        var r = MessageBox.Show(
+            "Uninstall IE Mode Viewer?\n\nThe viewer, desktop shortcut and settings will be removed.",
+            "IE Mode Viewer",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+        if (r != DialogResult.Yes) return;
+
+        try
+        {
+            var me = Process.GetCurrentProcess().Id;
+            foreach (var p in Process.GetProcessesByName("IEHost"))
+                if (p.Id != me) { try { p.Kill(); } catch { } }
+        }
+        catch { }
+
+        try { File.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "IE Mode Viewer.lnk")); } catch { }
+
+        try
+        {
+            Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall\IEHost", false);
+        }
+        catch { }
+
+        try
+        {
+            var appDir = AppSettings.SettingsDir;
+            var psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c ping 127.0.0.1 -n 3 > nul & rmdir /s /q \"{appDir}\"",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true,
+                WorkingDirectory = Path.GetTempPath(),
+            };
+            Process.Start(psi);
+        }
+        catch { }
+
+        Environment.Exit(0);
     }
 
     static string NormalizeUrl(string url)

@@ -99,6 +99,8 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 
 The app is also installed when you double-click the file from any folder (Downloads, etc.) — the install prompt appears first.
 
+**Uninstall** — like any app: *Settings → Apps → IE Mode Viewer → Uninstall*, or right-click the tray icon → **Uninstall**. The viewer, shortcut and settings are removed.
+
 ## Installation
 
 Requires **Windows 10/11**. The **.NET 11 SDK** is only needed if you build the host from source — end users just run the pre-built `IEHost.exe` (see [prerequisites](#prerequisites)).
