@@ -90,6 +90,15 @@ Some legacy web apps — DVR systems, corporate portals, industrial software —
 4. The viewer always reopens the last visited URL (`lastUrl`) — right-click the tray icon to change the hotkey or exit.
 5. Use `install.ps1 -Standalone -Autostart` to add the tray app to Windows startup (HKCU Run).
 
+### Quick start (non-technical users)
+
+1. Download **IEHost.exe** — a single self-contained file, nothing else needed.
+2. Double-click it, read the **ActiveX / Trusted Sites warning** and confirm installation (desktop shortcut is created).
+3. On first run enter your DVR / portal address — the page opens in the IE viewer.
+4. Double-click the **IE Mode Viewer** shortcut on the desktop anytime to open it again.
+
+The app is also installed when you double-click the file from any folder (Downloads, etc.) — the install prompt appears first.
+
 ## Installation
 
 Requires **Windows 10/11**. The **.NET 11 SDK** is only needed if you build the host from source — end users just run the pre-built `IEHost.exe` (see [prerequisites](#prerequisites)).

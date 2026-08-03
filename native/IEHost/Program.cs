@@ -32,6 +32,10 @@ class Program
             {
                 RunStandalone();
             }
+            else if (args.Length > 0 && args[0] == "--install")
+            {
+                RunInstall();
+            }
             else if (Console.IsInputRedirected)
             {
                 SetEmulation();
@@ -39,6 +43,8 @@ class Program
             }
             else
             {
+                if (!IsInstalled() && PromptInstall())
+                    return;
                 RunStandalone();
             }
         }
@@ -123,6 +129,63 @@ class Program
         SetActiveXSupport();
         AddToTrustedSites(url);
         Application.Run(new ViewerForm(url));
+    }
+
+    static bool IsInstalled()
+    {
+        var target = Path.Combine(AppSettings.SettingsDir, "IEHost.exe");
+        return string.Equals(
+            Path.GetFullPath(Environment.ProcessPath!),
+            Path.GetFullPath(target),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    static bool PromptInstall()
+    {
+        var r = MessageBox.Show(
+            "IE Mode Viewer — install\n\n" +
+            "The viewer enables ActiveX and adds every site you open to the IE Trusted Sites zone.\n" +
+            "Use it ONLY for trusted legacy pages (DVR, corporate portals, intranet) — NOT for random web sites.\n\n" +
+            "Install to %LOCALAPPDATA%\\IEHost and create a desktop shortcut?",
+            "IE Mode Viewer",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+        if (r != DialogResult.Yes) return false;
+        RunInstall();
+        return true;
+    }
+
+    static void RunInstall()
+    {
+        var appDir = AppSettings.SettingsDir;
+        var target = Path.Combine(appDir, "IEHost.exe");
+        try
+        {
+            Directory.CreateDirectory(appDir);
+            if (!string.Equals(Path.GetFullPath(Environment.ProcessPath!), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+                File.Copy(Environment.ProcessPath!, target, true);
+        }
+        catch { }
+
+        try
+        {
+            var link = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "IE Mode Viewer.lnk");
+            dynamic ws = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
+            dynamic sc = ws.CreateShortcut(link);
+            sc.TargetPath = target;
+            sc.Arguments = "--standalone";
+            sc.WorkingDirectory = appDir;
+            sc.IconLocation = $"{target},0";
+            sc.Save();
+        }
+        catch { }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = target, Arguments = "--standalone", UseShellExecute = true });
+        }
+        catch { }
     }
 
     static string NormalizeUrl(string url)
